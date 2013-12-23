@@ -10,7 +10,9 @@ QML_IMPORT_PATH =
 
 # The .cpp file which was generated for your project. Feel free to hack it.
 SOURCES += main.cpp \
-    ev3.cpp
+    ev3.cpp \
+    ev3motor.cpp \
+    ev3command.cpp
 
 # Installation path
 # target.path =
@@ -25,4 +27,7 @@ OTHER_FILES += \
     android/AndroidManifest.xml
 
 HEADERS += \
-    ev3.h
+    ev3.h \
+    bytecodes.h \
+    ev3motor.h \
+    ev3command.h

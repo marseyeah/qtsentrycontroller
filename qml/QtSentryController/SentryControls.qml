@@ -1,30 +1,94 @@
 import QtQuick 2.1
 import Ev3 1.0
+import QtQuick.Controls 1.0
 
 Item {
     id: controlsRoot
     property Ev3 sentry: null
 
     Item {
+        id: drivingControl
         anchors.fill: parent
         visible: controlsRoot.state == "connected"
 
-        CustomSlider {
-            id: throttle
-            anchors.top: parent.top
-            anchors.bottom: parent.bottom
-            anchors.right: parent.right
-            anchors.margins: 30
-            orientation: Qt.Vertical
+        function updateMotors(throttle, steering) {
+            sentry.motorA.power = throttle - steering;
+            sentry.motorD.power = throttle + steering;
         }
 
-        CustomSlider {
-            id: steering
+//        CustomSlider {
+//            id: throttle
+//            anchors.top: parent.top
+//            anchors.bottom: parent.bottom
+//            anchors.right: parent.right
+//            anchors.margins: 30
+//            orientation: Qt.Vertical
+//            onValueChanged: drivingControl.updateMotors()
+//        }
+
+//        CustomSlider {
+//            id: steering
+//            anchors.left: parent.left
+//            width: throttle.height
+//            anchors.bottom: parent.bottom
+//            anchors.margins: 30
+//            orientation: Qt.Horizontal
+//            onValueChanged: drivingControl.updateMotors()
+//        }
+
+        Rectangle {
             anchors.left: parent.left
-            width: throttle.height
             anchors.bottom: parent.bottom
             anchors.margins: 30
-            orientation: Qt.Horizontal
+            width: 450
+            height: 450
+            color: "#50000000"
+            border.width: 3
+            border.color: "white"
+
+            MouseArea {
+                id: joystick
+                anchors.fill: parent
+                onPositionChanged: {
+                    var t = -100 + ((joystick.height - mouse.y) / joystick.height) * 200;
+                    var s = -100 + (mouse.x / joystick.width) * 200;
+
+                    drivingControl.updateMotors(t, s);
+                }
+                onExited: drivingControl.updateMotors(0, 0);
+                onReleased: drivingControl.updateMotors(0, 0);
+            }
+
+            Rectangle {
+                width: 180
+                height: 180
+                radius: width / 2
+                color: "#CCFFFFFF"
+                visible: joystick.pressed
+                x: Math.min(joystick.width, Math.max(joystick.mouseX, 0)) - width / 2
+                y: Math.min(joystick.height, Math.max(joystick.mouseY, 0)) - height / 2
+            }
+        }
+
+        Slider {
+            id: arms
+            anchors.verticalCenter: parent.verticalCenter
+            anchors.right: parent.right
+            anchors.margins: 30
+            height: 500
+            orientation: Qt.Vertical
+            minimumValue: -80
+            maximumValue: 80
+            value: 0
+            onValueChanged: sentry.motorB.power = -arms.value
+            onPressedChanged: {
+                if (!arms.pressed)
+                    arms.value = 0
+            }
+            onHoveredChanged: {
+                if (!arms.hovered)
+                    arms.value = 0
+            }
         }
     }
 

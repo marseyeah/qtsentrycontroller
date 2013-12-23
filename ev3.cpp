@@ -1,4 +1,5 @@
 #include "ev3.h"
+#include "ev3motor.h"
 
 #include <QDebug>
 
@@ -14,10 +15,17 @@ Ev3::Ev3()
     m_connection = new QTcpSocket;
     QObject::connect(m_connection, &QTcpSocket::stateChanged, this, &Ev3::updateState);
     QObject::connect(m_connection, SIGNAL(error(QAbstractSocket::SocketError)), this, SLOT(updateError(QAbstractSocket::SocketError)));
+
+    m_motors.append(new Ev3Motor(this, Ev3Motor::PortA));
+    m_motors.append(new Ev3Motor(this, Ev3Motor::PortB));
+    m_motors.append(new Ev3Motor(this, Ev3Motor::PortC));
+    m_motors.append(new Ev3Motor(this, Ev3Motor::PortD));
 }
 
 Ev3::~Ev3()
 {
+    qDeleteAll(m_motors);
+
     disconnect();
     m_connection->deleteLater();
     m_broadcast->deleteLater();
@@ -86,6 +94,34 @@ void Ev3::disconnect()
         return;
 
     m_connection->disconnectFromHost();
+}
+
+void Ev3::sendCommand(const QByteArray &data, bool noReply)
+{
+    if (m_connectionState != Connected)
+        return;
+
+    QByteArray actual;
+    QDataStream out(&actual, QIODevice::WriteOnly);
+    out << quint8(data.size() + 5) << quint8(0)
+        << quint8(0) << quint8(0)
+        << (noReply ? quint8(0x80) : quint8(0))
+        << quint8(0) << quint8(0);
+    out.writeRawData(data.constData(), data.size());
+
+//    qDebug() << actual.toHex();
+
+    m_connection->write(actual);
+}
+
+QByteArray Ev3::readResponse()
+{
+    if (m_connectionState != Connected)
+        return QByteArray();
+
+    if (!m_connection->bytesAvailable())
+        m_connection->waitForReadyRead(1000);
+    return m_connection->readAll();
 }
 
 Ev3::ConnectionState Ev3::connectionState() const
